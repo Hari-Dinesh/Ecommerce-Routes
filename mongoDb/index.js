@@ -1,7 +1,7 @@
 const express=require('express')
 const app =express()
 const mongoose=require('mongoose')
-mongoose.connect('mongodb+srv://Dinesh:Asdfg123@cluster0.8pjuhmq.mongodb.net/Mongoln?retryWrites=true&w=majority&appName=Cluster0"').then(()=>{
+mongoose.connect('mongodb+srv://Dinesh:Asdfg123@cluster0.8pjuhmq.mongodb.net/Mongoln?retryWrites=true&w=majority&appName=Cluster0').then(()=>{
     console.log('connected to the mongoose')
 }).catch((err)=>{
     console.log(err)

@@ -1,18 +1,25 @@
 const mongoose=require('mongoose')
 const {Schema}=mongoose;
-const UserOrders=new Schema({
-    Phone:{
-        type:String,
-        unique:true
+const OrderSchema = new Schema({
+    Phone: {
+        type: Number,
+        required: true
     },
-    status:String,
-    Adress:String,
-    Total_price:String,
-    Order_date:String,
+    orderDate: {
+        type: Date,
+    },
     orderdata:{
         type:Array,
-        required:true
+    },
+    totalPrice: {
+        type: Number,
+        required: true
+    },
+    shippingAddress: {
+        type: String
     }
+   
+});
 
-})
-module.exports=mongoose.model('Orders',UserOrders)
+const Order = mongoose.model('Order', OrderSchema);
+module.exports = Order;
