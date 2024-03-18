@@ -1,98 +1,143 @@
-const Order=require('../Models/orderModel')
-module.exports.Order=async(req,res)=>{
-            const tod = new Date();
-            const dd = String(tod.getDate()).padStart(2, '0');
-            const mm = String(tod.getMonth() + 1).padStart(2, '0');
-            const yyyy = tod.getFullYear();
-            const finalDate = `${dd}/${mm}/${yyyy}`;
-    try {
-        let {data}=req.body.orderdata
-          const phonecheck=await Order.findOne({Phone:req.body.Phone})
-          if(phonecheck==null){
-            try {
-                await Order.create({
-                    Phone:req.body.Phone,
-                    status:req.body.status,
-                    Adress:req.body.Adress,
-                    Total_price:req.body.Total_Price,
-                    Order_date:finalDate,
-                    orderdata:[data]
-                }).then(()=>{
-                    res.send({success:true})
-                })
-            } catch (error) {
-                res.send(error)
-            }
-          }else{
-            try {
-                await Order.findOneAndUpdate({Phone:req.body.Phone},
-                    {
-                      $push:{orderdata:data,
-                        status:req.body.status,
-                        Adress:req.body.Adress,
-                        Total_price:req.body.Total_Price,
-                        Order_date:req.body.Order_date,}}).then(()=>{
-                        res.json({success:true})
-                      })
-            } catch (error) {
-                res.send(error)
-            }
-          }
-    } catch (error) {
-        res.send("message error")
+const Order = require("../Models/orderModel");
+module.exports.Order = async (req, res) => {
+  const {data}=req.body
+  try {
+    if (!req.body.Phone) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Phone number is required." });
     }
-}
-function isInCurrentMonth(date) {
-    const today = new Date();
-    return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-}
-function isInCurrentWeek(date) {
-    const today = new Date();
-    const currentWeekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-    const currentWeekEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (6 - today.getDay()));
+    
+    try {
+      await Order.create({
+        Phone: req.body.Phone,
+        orderDate: req.body.orderDate,
+        totalPrice: req.body.totalPrice,
+        shippingAddress: req.body.shippingAddress,
+        orderdata: [req.body.data],
+      });
+      return res.json({ success: true });
+    } catch (error) {
+      console.log(error, "in create");
+      return res
+        .status(500)
+        .json({ success: false, message: "Internal server error." });
+    }
+  } catch (error) {
+    console.log(error, "error in catch");
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error." });
+  }
+};
 
-    return date >= currentWeekStart && date <= currentWeekEnd;
-}
-module.exports.dashboardData=async(req,res)=>{
-    //console.log("hi")
-    const ThisMonthRevenue=0;
-    const MonthNumberOfOrders=0;
-    const NumberOfItemsOrderMonth=0;
-    const THisWeekRevenue=0;
-    const WeekNumberOfOrder=0;
-    const NumberOfItemsOrderWeek=0;
-    try {
-        let data=await Order.find()
-        for(let i=0;i<data.length;i++){
-            for(let j=0;j<data[i].orderdata.length;j++){
-                const [dd, mm, yyyy] = data[i].orderdata[j][0].Order_date.split("/");
-                const date = new Date(`${mm}/${dd}/${yyyy}`);
-                const isInMonth = isInCurrentMonth(date);
-                const isInWeek = isInCurrentWeek(date);
-                if(isInMonth){
-                    ThisMonthRevenue+=data[i].orderdata[j][0].Total_price;
-                    NumberOfItemsOrderMonth+=data[i].orderdata[j].length-1;
-                    MonthNumberOfOrders++;
-                }
-                if(isInWeek){
-                    THisWeekRevenue=data[i].orderdata[j][0].Total_Price;
-                    NumberOfItemsOrderWeek+=data[i].orderdata[j].length-1;
-                    WeekNumberOfOrder++;
-                }
-            }
-        }
-        // const responseData = {
-        //     ThisMonthRevenue,
-        //     MonthNumberOfOrders,
-        //     NumberOfItemsOrderMonth,
-        //     ThisWeekRevenue,
-        //     WeekNumberOfOrders,
-        //     NumberOfItemsOrderWeek
-        // };
-        
-        console.log(ThisMonthRevenue)
-        res.json(responseData)
-    } catch (error) {
-        res.send(error)
+module.exports.dashboardData = async (req, res) => {
+  try {
+    let data = await Order.find();
+    const date=new Date();
+    console.log(date)
+    // for (let i = 0; i < data.length; i++) {
+    //   console.log(i);
+    //   for (let j = 0; j < data[i].orderdata.length; j++) {
+    //     const [dd, mm, yyyy] = data[i].orderdata[j][0].Order_date.split("/");
+    //     const date = new Date(`${mm}/${dd}/${yyyy}`);
+    //     const isInMonth = isInCurrentMonth(date);
+    //     const isInWeek = isInCurrentWeek(date);
+    //     if (isInMonth) {
+    //       ThisMonthRevenue += data[i].orderdata[j][0].Total_price;
+    //       NumberOfItemsOrderMonth += data[i].orderdata[j].length - 1;
+    //       MonthNumberOfOrders++;
+    //     }
+    //     if (isInWeek) {
+    //       THisWeekRevenue = data[i].orderdata[j][0].Total_Price;
+    //       NumberOfItemsOrderWeek += data[i].orderdata[j].length - 1;
+    //       WeekNumberOfOrder++;
+    //     }
+    //   }
+    // }
+    const averageOrderPrice = await Order.aggregate([
+      {
+        $group: {
+          _id: null,
+          averageTotalPrice: { $avg: "$totalPrice" },
+        },
+      },
+    ]);
+const thisMonthStats = await Order.aggregate([
+  {
+    $match: {
+      orderDate: {
+        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1), 
+        $lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0) 
+      }
     }
-}
+  },
+  {
+    $group: {
+      _id: null,
+      ThisMonthRevenue: { $sum: "$orderdata.totalPrice" }, 
+      MonthNumberOfOrders: { $sum: 1 }, 
+      NumberOfItemsOrderMonth: { $sum: { $size: "$orderdata" } } 
+    }
+  }
+]);
+
+
+const thisWeekStats = await Order.aggregate([
+  {
+    $match: {
+      orderDate: {
+        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - (new Date().getDay() - 1)), 
+        $lt: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + (7 - new Date().getDay())) 
+      }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      ThisWeekRevenue: { $sum: "$orderdata.totalPrice" }, 
+      WeekNumberOfOrders: { $sum: 1 }, 
+      NumberOfItemsOrderWeek: { $sum: { $size: "$orderdata" } } 
+    }
+  }
+]);
+
+
+console.log("This Month Stats:", thisMonthStats);
+console.log("This Week Stats:", thisWeekStats);
+
+
+const thisMonthRevenue = thisMonthStats.length > 0 ? thisMonthStats[0].ThisMonthRevenue : 0;
+const monthNumberOfOrders = thisMonthStats.length > 0 ? thisMonthStats[0].MonthNumberOfOrders : 0;
+const numberOfItemsOrderMonth = thisMonthStats.length > 0 ? thisMonthStats[0].NumberOfItemsOrderMonth : 0;
+
+const thisWeekRevenue = thisWeekStats.length > 0 ? thisWeekStats[0].ThisWeekRevenue : 0;
+const weekNumberOfOrders = thisWeekStats.length > 0 ? thisWeekStats[0].WeekNumberOfOrders : 0;
+const numberOfItemsOrderWeek = thisWeekStats.length > 0 ? thisWeekStats[0].NumberOfItemsOrderWeek : 0;
+
+console.log("This Month Revenue:", thisMonthRevenue);
+console.log("Month Number of Orders:", monthNumberOfOrders);
+console.log("Number of Items Ordered This Month:", numberOfItemsOrderMonth);
+console.log("This Week Revenue:", thisWeekRevenue);
+console.log("Week Number of Orders:", weekNumberOfOrders);
+console.log("Number of Items Ordered This Week:", numberOfItemsOrderWeek);
+
+    
+    console.log("this is Totoa",totalRevenue);
+    const responseData = {
+      ThisMonthRevenue,
+      MonthNumberOfOrders,
+      NumberOfItemsOrderMonth,
+      ThisWeekRevenue,
+      WeekNumberOfOrders,
+      NumberOfItemsOrderWeek,
+    };
+
+    res.json({
+      responseData,
+      averageTotalPrice: averageResult[0].averageTotalPrice,
+    });
+  } catch (error) {
+    res.send(error);
+  }
+};
