@@ -1,8 +1,8 @@
 const mongoose=require('mongoose')
 const {Schema}=mongoose;
 const OrderSchema = new Schema({
-    Phone: {
-        type: Number,
+    UserId: {
+        type: String,
         required: true
     },
     orderDate: {

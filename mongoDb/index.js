@@ -1,7 +1,8 @@
 const express=require('express')
 const app =express()
 const mongoose=require('mongoose')
-mongoose.connect('mongodb+srv://Dinesh:Asdfg123@cluster0.8pjuhmq.mongodb.net/Mongoln?retryWrites=true&w=majority&appName=Cluster0').then(()=>{
+require("dotenv").config()
+mongoose.connect(process.env.MONGO_URL).then(()=>{
     console.log('connected to the mongoose')
 }).catch((err)=>{
     console.log(err)
@@ -14,6 +15,6 @@ app.use('/mess',ItemROutes)
 const OrderRoutes=require('./Routes/OrdersRoute')
 app.use('/ord',OrderRoutes)
 
-app.listen('5000',()=>{
-    console.log("port running on 5000")
+app.listen(process.env.PORT,()=>{
+    console.log(`port running on ${process.env.PORT}`)
 })
