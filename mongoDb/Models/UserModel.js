@@ -4,6 +4,10 @@ const userschema=new mongoose.Schema({
         type:String,
         require:true
     },
+    Email:{
+        type:String,
+        require:true
+    },
     Phone:{
         type:String,
         require:true,
@@ -22,5 +26,9 @@ const userschema=new mongoose.Schema({
         type:String,
         require:true
     },
+    verification:{
+        type:Boolean,
+        default:false
+    }
 })
 module.exports=mongoose.model('user',userschema);

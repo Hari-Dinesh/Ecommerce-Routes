@@ -1,12 +1,12 @@
 const mongoose=require('mongoose')
-const Tokenschema=new mongoose.Schema({
-    UserId:{
+const adminschema=new mongoose.Schema({
+    Email:{
         type:String,
         require:true
     },
-    Token:{
+    Password:{
         type:String,
         require:true
-    }
+    },
 })
-module.exports=mongoose.model('Tokens',Tokenschema)
+module.exports=mongoose.model('Admin',adminschema);

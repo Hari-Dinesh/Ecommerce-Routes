@@ -17,6 +17,14 @@ const OrderSchema = new Schema({
     },
     shippingAddress: {
         type: String
+    },
+    PaymentMode:{
+        type:String
+    },
+    Status:{
+        type: String,
+        enum: ['Pending', 'outForDelivary',"Placed"],
+        default:'Pending'
     }
    
 });
