@@ -1,11 +1,15 @@
-const {usersSigin,userLogin,refreshToken,logout,verify,adminCreate,adminLogin,notification}=require('../controllers/usersController')
-const router = require("express").Router();
-router.post('/createuser',usersSigin)//
-router.post('/login',userLogin)
-router.post('/refreshToken',refreshToken)
-router.post('/logout',logout)
-router.get('/:id',verify)
-router.post('/admincreate',adminCreate)
-router.post('/adminlogin',adminLogin)
-router.post('/xyz',notification)
-module.exports=router
+import express from 'express';
+import { UserController, AdminController } from '../controllers/usersController.js';
+
+const router = express.Router();
+
+router.post('/createuser', UserController.usersSigin);
+router.post('/login', UserController.userLogin);
+router.post('/refreshToken', UserController.refreshToken);
+router.post('/logout', UserController.logout);
+router.get('/:id', UserController.verify);
+router.post('/admincreate', AdminController.adminCreate);
+router.post('/adminlogin', AdminController.adminLogin);
+router.post('/notify', AdminController.notification);
+
+export default router;

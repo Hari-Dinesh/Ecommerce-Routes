@@ -1,6 +1,6 @@
-const mongoose =require('mongoose')
-const ItemSchema=new mongoose.Schema({
-    itemName:String,
+import mongoose from "mongoose";
+const ProductSchema=new mongoose.Schema({
+    ProductName:String,
     actualPrice:Number,
     sellingPrice:Number,
     rating:{
@@ -15,7 +15,8 @@ const ItemSchema=new mongoose.Schema({
         type:Number,
         default:0
     },
-    itemDescription:String,
+    ProductDescription:String,
     percentage:Number,
 })
-module.exports=new mongoose.model('Items',ItemSchema);
+const Product= mongoose.model('Products',ProductSchema);
+export default Product

@@ -1,12 +1,17 @@
-const mongoose=require('mongoose')
-const Tokenschema=new mongoose.Schema({
-    UserId:{
-        type:String,
-        require:true
+
+import mongoose from 'mongoose';
+
+const TokenSchema = new mongoose.Schema({
+    UserId: {
+        type: String,
+        required: true
     },
-    Token:{
-        type:String,
-        require:true
+    Token: {
+        type: String,
+        required: true
     }
-})
-module.exports=mongoose.model('Tokens',Tokenschema)
+});
+
+const Token = mongoose.model('Token', TokenSchema);
+
+export default Token;

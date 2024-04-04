@@ -1,20 +1,25 @@
-const express=require('express')
-const app =express()
-const mongoose=require('mongoose')
-require("dotenv").config()
-mongoose.connect(process.env.MONGO_URL).then(()=>{
-    console.log('connected to the mongoose')
-}).catch((err)=>{
-    console.log(err)
-})
-app.use(express.json());
-const userRoutes=require('./Routes/UsersRoutes')
-app.use('/api',userRoutes)
-const ItemROutes=require('./Routes/ItemRoutes')
-app.use('/mess',ItemROutes)
-const OrderRoutes=require('./Routes/OrdersRoute')
-app.use('/ord',OrderRoutes)
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import UserRoutes from "./Routes/UsersRoutes.js";
+import ProductRoutes from "./Routes/ProductRoutes.js";
+import OrderRoutes from "./Routes/OrdersRoute.js";
 
-app.listen(process.env.PORT,()=>{
-    console.log(`port running on ${process.env.PORT}`)
-})
+dotenv.config();
+const app = express();
+app.use(express.json());
+
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => {
+    console.log("connected to the mongoose");
+    app.use("/api", UserRoutes); //api=>authentication_Routes
+    app.use("/products", ProductRoutes);
+    app.use("/ord", OrderRoutes);//ord=>orders
+    app.listen(process.env.PORT, () => {
+      console.log(`port running on ${process.env.PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.log("error occured while starting the server");
+  });

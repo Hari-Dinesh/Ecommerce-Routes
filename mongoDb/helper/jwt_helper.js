@@ -1,7 +1,8 @@
-const JWT = require("jsonwebtoken");
-const createError = require('http-errors');
-const Token=require('../Models/Token')
-module.exports = {
+
+import JWT from "jsonwebtoken";
+import createError from 'http-errors';
+
+const jwtHelper = {
   signAccessToken: (Phone) => {
     return new Promise((resolve, reject) => {
       const payload = {
@@ -21,6 +22,7 @@ module.exports = {
       });
     });
   },
+
   verifyAccessToken: (req, res, next) => {
     if (!req.headers['authorization']) return next(createError.Unauthorized())
     const authHeader = req.headers['authorization']
@@ -36,6 +38,7 @@ module.exports = {
       next()
     })
   },
+
   signRefreshToken: (Phone) => {
     return new Promise((resolve, reject) => {
       const payload = {
@@ -55,6 +58,7 @@ module.exports = {
       });
     });
   },
+
   verifyRefreshToken: (refreshToken) => {
     return new Promise((resolve, reject) => {
       JWT.verify(
@@ -71,3 +75,5 @@ module.exports = {
     });
   }
 };
+
+export {jwtHelper};

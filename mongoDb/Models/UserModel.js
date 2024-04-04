@@ -1,4 +1,4 @@
-const mongoose=require('mongoose')
+import mongoose from 'mongoose';
 const userschema=new mongoose.Schema({
     Name:{
         type:String,
@@ -31,4 +31,6 @@ const userschema=new mongoose.Schema({
         default:false
     }
 })
-module.exports=mongoose.model('user',userschema);
+const user=mongoose.model('user',userschema);
+
+export default user;

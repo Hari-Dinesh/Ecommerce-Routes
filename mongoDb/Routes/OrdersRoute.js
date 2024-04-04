@@ -1,8 +1,11 @@
-const {dashboardData,Order,Myorder,updateOrderDetails,adminOrders}=require('../controllers/OrderController')
-const router=require('express').Router()
-router.post('/Order',Order)
-router.post('/OrderDashboard',dashboardData)
-router.post('/MyOrder',Myorder)
-router.post('/updateOrderDetails',adminOrders)
-router.post('/updateOrderDetails/:oid',updateOrderDetails)
-module.exports=router
+import {OrderController} from '../controllers/OrderController.js'
+import {adminverify} from '../middlewares/verifyauth.js';
+import {verifyUser} from '../middlewares/verifyauthUser.js';
+import express from 'express';
+const router = express.Router();
+router.post('/Order',verifyUser,OrderController.Order)
+router.post('/OrderDashboard',adminverify,OrderController.dashboardData)
+router.post('/MyOrder',verifyUser,OrderController.Myorder)
+router.post('/updateOrderDetails',adminverify,OrderController.adminOrders)
+router.post('/updateOrderDetails/:oid',adminverify,OrderController.updateOrderDetails)
+export default router;
