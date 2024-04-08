@@ -1,25 +1,22 @@
-
 import Product from "../Models/ProductModel.js";
-
+import { ObjectId } from 'mongodb';
 class ProductController {
   static async AddProduct(req, res) {
-    const { actualPrice, sellingPrice } = req.body;
+    const { actualPrice, sellingPrice ,ProductName,ProductDescription} = req.body;
+    if(!actualPrice||!sellingPrice||!ProductName||!ProductDescription){
+      return res.send("Every field need to be defined there are still blanks")
+    }
     const percentage = Math.round(
-
       ((actualPrice - sellingPrice) / actualPrice) * 100
     );
-
+      
     const newProduct = new Product({
-      ProductName: req.body.ProductName,
+      ProductName,
       actualPrice,
       sellingPrice,
-      ProductDescription: req.body.ProductDescription,
+      ProductDescription,
       percentage: percentage,
     });
-    
-    if(!newProduct.ProductName||!newProduct.sellingPrice){
-      return res.send("Not a valid data")
-    }
     try {
       const Product = await newProduct.save();
       res.status(201).json({ message: "new Product saved successfully", Product: Product });
@@ -40,8 +37,25 @@ class ProductController {
   static async updateProduct(req, res) {
     try {
       const { id } = req.params;
+      if(!ObjectId.isValid(id)){
+        return res.send("Not a valid userId")
+      }
       const { ProductName, actualPrice, sellingPrice, ProductDescription } = req.body;
-      const percentage = Math.round(((actualPrice - sellingPrice) / actualPrice) * 100);
+      const productdetails=await Product.findById(id);
+      let percentage;
+      if(!actualPrice&&!sellingPrice){
+        percentage=productdetails.percentage
+      }else if(actualPrice&&!sellingPrice){
+        percentage=Math.round(((actualPrice - productdetails.sellingPrice) / actualPrice) * 100)
+       
+      }else if(!actualPrice&&sellingPrice){
+        console.log(sellingPrice,productdetails.actualPrice)
+        percentage=Math.round(((productdetails.actualPrice - sellingPrice) / productdetails.actualPrice) * 100)
+        console.log(percentage)
+      }else{
+        percentage=Math.round(((actualPrice - sellingPrice) / actualPrice) * 100)
+      }
+      
       const data = await Product.findByIdAndUpdate(
         id,
         {
@@ -53,6 +67,7 @@ class ProductController {
         },
         { new: true }
       );
+      
       if (!data) {
         return res.status(404).json({ success: false, message: "Document not found" });
       }
@@ -63,6 +78,7 @@ class ProductController {
         data: data,
       });
     } catch (error) {
+      console.log(error)
       res.status(404).json({ success: false });
     }
   }
@@ -70,14 +86,17 @@ class ProductController {
   static async deleteProduct(req, res) {
     try {
       const { id } = req.params;
-      const data = await Product.findByIdAndDelete(id);
+      if(!ObjectId.isValid(id)){
+        return res.send("Id is Incorrect")
+      }
+      const data=await Product.findByIdAndDelete(id);
       if (!data) {
         return res.status(404).json({ success: false, message: "Document not found" });
       }
       res.json({
         success: true,
         message: "Document deleted successfully",
-        data: data,
+        productName:data.ProductName
       });
     } catch (error) {
       res.status(404).json({ success: false, message: "error found" });

@@ -1,6 +1,7 @@
 import { jwtHelper } from "../helper/jwt_helper.js";
 import User from "../Models/UserModel.js";
 import {checkAuthorization} from './checkAuthorization.js';
+import { ObjectId } from 'mongodb';
 const verifyUser=async(req,res,next)=>{
     checkAuthorization(req,res,async()=>{
         try {
@@ -11,6 +12,9 @@ const verifyUser=async(req,res,next)=>{
                     });
                 }
                 const userId = req.payload.aud;
+                if (!ObjectId.isValid(userId)) {
+                    return res.send("Not a valid user ID");
+                }
           const finduserId = await User.findById(userId);
           if (!finduserId) {
             return res

@@ -6,7 +6,7 @@ import authSchema from "../helper/validation.js";
 import validlogin from "../helper/validationLogin.js";
 import { Email } from "../helper/Mail.js";
 import { jwtHelper } from "../helper/jwt_helper.js";
-
+import { ObjectId } from 'mongodb';
 const {
   signAccessToken,
   signRefreshToken,
@@ -22,7 +22,7 @@ const finalValidationGenerateToken = async (accessToken, user, req, res) => {
       Token: accessToken,
     });
   } else {
-   await new Token({
+    await new Token({
       UserId: user._id,
       Token: accessToken,
     }).save();
@@ -48,12 +48,15 @@ class UserController {
       });
 
       const data = await user.save();
-
+      if (!data) {
+        return res.send("User Not Saved");
+      }
       const accessToken = await signAccessToken(data.id);
       const datatoken = new Token({
+        UserId: data.id,
         Token: accessToken,
       }).save();
-      Email(
+      await Email(
         data.Email,
         "Tericsoft Signin",
         `<p><b>You have successfully created a new account.</b></p><p>To verify your account, please click the following button:</p><a href='http://localhost:5000/api/${data.id}' style='background-color: #4CAF50; color: white; padding: 14px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px;'>Verify Account</a>`
@@ -62,12 +65,14 @@ class UserController {
     } catch (error) {
       if (error.isJoi === true) {
         error.status = 402;
+        console.log(error)
         res.status(402).send("Validation error: " + error.message);
       } else if (
         error.code === 11000 &&
         error.keyPattern &&
         error.keyPattern.Phone === 1
       ) {
+        
         res.status(409).send("Phone number is already in use");
       } else {
         res.status(500).send("Error saving user");
@@ -78,7 +83,12 @@ class UserController {
   static async userLogin(req, res) {
     try {
       const value = await validlogin.validateAsync(req.body);
-      const user = await User.findOne({ Phone: value.Phone });
+      const user = await User.findOne({
+        $or: [
+          { Phone: value.Phone },
+          { Email: value.Phone }
+        ]
+      });
       if (!user) {
         return res.status(404).send("User not found");
       }
@@ -97,10 +107,11 @@ class UserController {
         error.status = 402;
         res.status(402).send("Validation error: " + error.message);
       } else {
+        console.log(error)
         res.status(500).send("Error logging in user");
       }
     }
-  }//
+  } //
 
   static async refreshToken(req, res, next) {
     try {
@@ -114,17 +125,19 @@ class UserController {
       next(error);
     }
   }
-//logout for both user and admin
+  //logout for both user and admin
   static async logout(req, res) {
     try {
       if (!req.headers["authorization"]) {
-        return res.status(400).send("Refresh token is required");
+        return res
+          .status(400)
+          .send("Token required to log out or the user already loggedout");
       }
       verifyAccessToken(req, res, async (err) => {
         if (err) {
           return res
             .status(401)
-            .json({ error: "Unauthorized: User has already logged out" });
+            .json({ error: "Unauthorized: you has already logged out" });
         }
         const fnd = await Token.findOne({
           Token: req.headers["authorization"].split(" ")[1],
@@ -145,6 +158,9 @@ class UserController {
   static async verify(req, res) {
     try {
       const { id } = req.params;
+      if (!ObjectId.isValid(id)) {
+        return res.send("Not a valid User Id");
+      }
       const data = await User.findByIdAndUpdate(id, {
         verification: true,
       });
@@ -154,7 +170,7 @@ class UserController {
       }
 
       res.send(
-        "<h1>Verification successful!</h1> <a href='https://login'>Login from here</a>"
+        "<h1>Verification successful!</h1> <a href='http://localhost:3000/api/login'>Login from here</a>"
       );
     } catch (error) {
       res.status(500).send("<h1>Error occurred during verification</h1>");
@@ -187,34 +203,43 @@ class AdminController {
         return res.status(401).send({ message: "Invalid Email" });
       }
       const passwordMatch = await bcrypt.compare(Password, user.Password);
-      console.log(passwordMatch)
       if (!passwordMatch) {
         return res.status(401).send("Invalid password");
       }
       const accessToken = await signAccessToken(user.id);
-      await finalValidationGenerateToken(accessToken, user, req, res);
+      await finalValidationGenerateToken(accessToken, user, req, res);//saving the token to the Token Schema
     } catch (error) {
       res.send("error");
     }
   }
   //send notifications to users
-  static async notification(req,res){
+  static async notification(req, res) {
     try {
-      const { message } = req.body;
-      const {filter}=req.body
-      const {MessageHeader}=req.body
+      let { Message } = req.body;
+      const { filter } = req.body;
+      const { MessageHeader } = req.body;
+      console.log(Message, "===========");
+      if (!Message||!MessageHeader) {
+        return res.send(
+          "Email Message and its Header need to be written properly"
+        );
+      }
       const usersWithEmails = await User.find(filter).select("Email");
       const emails = usersWithEmails
         .filter((user) => user.Email)
         .map((user) => user.Email);
-    await Email(emails, MessageHeader, message);
+      if (emails.length == 0) {
+        return res.send(
+          "There is No Such Customer You are trying to send message for"
+        );
+      }
+      await Email(emails, MessageHeader, Message);
       return res.send("email sent sucessfully");
-    
-  } catch (error) {
-    return res.send("error");
-  }
+    } catch (error) {
+      console.log(error)
+      return res.send("error");
+    }
   }
 }
 
 export { UserController, AdminController };
-

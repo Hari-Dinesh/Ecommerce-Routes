@@ -6,6 +6,6 @@ const router = express.Router();
 router.post('/Order',verifyUser,OrderController.Order)
 router.post('/OrderDashboard',adminverify,OrderController.dashboardData)
 router.post('/MyOrder',verifyUser,OrderController.Myorder)
-router.post('/updateOrderDetails',adminverify,OrderController.adminOrders)
+router.post('/adminOrderDetails',adminverify,OrderController.adminOrders)
 router.post('/updateOrderDetails/:oid',adminverify,OrderController.updateOrderDetails)
 export default router;
