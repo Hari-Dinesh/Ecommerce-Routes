@@ -15,7 +15,7 @@ mongoose
     console.log("connected to the mongoose");
     app.use("/api", UserRoutes); //api=>authentication_Routes
     app.use("/products", ProductRoutes);
-    app.use("/ord", OrderRoutes);//ord=>orders
+    app.use("/orders", OrderRoutes);//ord=>orders
     app.listen(process.env.PORT, () => {
       console.log(`port running on ${process.env.PORT}`);
     });

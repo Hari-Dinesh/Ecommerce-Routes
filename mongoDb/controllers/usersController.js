@@ -15,15 +15,19 @@ const {
 } = jwtHelper;
 
 //updating token
-const finalValidationGenerateToken = async (accessToken, user, req, res) => {
+const finalValidationGenerateToken = async (accessToken, user, req, res,role) => {
   const finddata = await Token.find({ UserId: user._id });
   if (finddata.length > 0) {
+    if(finddata[0].Role != role){
+      return res.status(402).json({status:402,success:false,message:"incorrect role"});
+    }
     await Token.findByIdAndUpdate(finddata[0].id, {
       Token: accessToken,
     });
   } else {
     await new Token({
       UserId: user._id,
+      Role:role,
       Token: accessToken,
     }).save();
   }
@@ -54,6 +58,7 @@ class UserController {
       const accessToken = await signAccessToken(data.id);
       const datatoken = new Token({
         UserId: data.id,
+        Role:"user",
         Token: accessToken,
       }).save();
       await Email(
@@ -101,7 +106,7 @@ class UserController {
       }
       const accessToken = await signAccessToken(user.id);
       const refreshToken = await signRefreshToken(user.id);
-      await finalValidationGenerateToken(accessToken, user, req, res);
+      await finalValidationGenerateToken(accessToken, user, req, res,"user");
     } catch (error) {
       if (error.isJoi === true) {
         error.status = 402;
@@ -176,6 +181,7 @@ class UserController {
       res.status(500).send("<h1>Error occurred during verification</h1>");
     }
   }
+  
 }
 
 class AdminController {
@@ -207,9 +213,10 @@ class AdminController {
         return res.status(401).send("Invalid password");
       }
       const accessToken = await signAccessToken(user.id);
-      await finalValidationGenerateToken(accessToken, user, req, res);//saving the token to the Token Schema
+      await finalValidationGenerateToken(accessToken, user, req, res,"admin");//saving the token to the Token Schema
     } catch (error) {
-      res.send("error");
+      console.log(error)
+      res.status(402).json({status:402,success:false,message:error.message});
     }
   }
   //send notifications to users
@@ -218,7 +225,6 @@ class AdminController {
       let { Message } = req.body;
       const { filter } = req.body;
       const { MessageHeader } = req.body;
-      console.log(Message, "===========");
       if (!Message||!MessageHeader) {
         return res.send(
           "Email Message and its Header need to be written properly"

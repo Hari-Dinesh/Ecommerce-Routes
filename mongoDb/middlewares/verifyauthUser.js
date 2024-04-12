@@ -3,7 +3,10 @@ import User from "../Models/UserModel.js";
 import {checkAuthorization} from './checkAuthorization.js';
 import { ObjectId } from 'mongodb';
 const verifyUser=async(req,res,next)=>{
-    checkAuthorization(req,res,async()=>{
+    checkAuthorization(req,res,async(role)=>{
+        if(role!=="user"){
+            return res.status(402).json({message:"You are not a valid User",status:402,success:false})
+          }
         try {
             jwtHelper.verifyAccessToken(req, res, async (err) => {
                 if (err) {

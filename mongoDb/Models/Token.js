@@ -6,6 +6,12 @@ const TokenSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    Role:{
+        type:String,
+        enum: ['user', 'admin'],
+        default:'user',
+        required:true
+    },
     Token: {
         type: String,
         required: true

@@ -12,7 +12,8 @@ const checkAuthorization = async (req, res, next) => {
     if (!fnd) {
         return res.status(404).send("Login to perform this action");
     }
-    next();
+    const role = fnd.Role; 
+    next(role);
 };
 
 export { checkAuthorization };

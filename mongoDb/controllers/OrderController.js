@@ -1,23 +1,25 @@
 import Order from "../Models/orderModel.js";
 import User from "../Models/UserModel.js";
 import Admin from "../Models/adminModel.js";
+import Cart from "../Models/cart.js";
+import Product from "../Models/ProductModel.js";
 import { Email } from "../helper/Mail.js";
 import { ObjectId } from 'mongodb';
-
-class OrderController {
-  static async Order(req, res) {
-    try {
-      const userId = req.payload.aud;
+const finalPlaceOrder=async(req,res,data,userId)=>{
       const user = await User.findById(userId);
-      if(!user.Email){
-        return res.status(404).json({status:true,message:"Email Not Found Update Your Page"})
-      }
+      console.log(user)
+      let totalPrice=0;
+      const value= data.map(async x=>{
+        const product=await Product.findById(x.productId)
+        totalPrice+=(x.quantity)*(product.sellingPrice)
+      })
+      await Promise.all(value)
       await Order.create({
         UserId: userId,
         orderDate: new Date(),
-        totalPrice: req.body.totalPrice,
-        shippingAddress: req.body.shippingAddress,
-        orderdata: req.body.data,
+        totalPrice: totalPrice,
+        shippingAddress: user.Address,
+        orderdata: data,
         PaymentMode: req.body.PaymentMode,
       });
       
@@ -26,8 +28,22 @@ class OrderController {
         "Yoy Your Order placed 😎",
         "<b>You order have been placed thank you <br/> your order will be reach to you at the earliest</b>"
       );
-      res.json({ Status:200,success: true,message:"Email Sent Sucessfully" });
+      
+}
+class OrderController {
+  static async Order(req, res) {
+    try {
+      const userId = req.payload.aud;
+      const data1=req.body.data
+     
+      if(data1.length!=1){
+        return res.send('Incorrect Item notation')
+      }
+      
+      await finalPlaceOrder(req,res,data1,userId)
+      res.status(201).json({status:201,success:true,message:"Order Placed YOY"})
     } catch (error) {
+      console.log(error)
       return res
         .status(500)
         .json({ success: false, message: "Internal server error out." });
@@ -108,8 +124,10 @@ class OrderController {
     try {
       const UserId = req.payload.aud;
       const orders = await Order.find({UserId:UserId});
+      if(!orders){
+        return res.send(orders)
+      }
       res.send(orders.reverse());
-    
     } catch (error) {
       res.status(500).send(error.message);
     }
@@ -140,8 +158,12 @@ class OrderController {
         if(!req.body.Status){
           return res.send('Status need to be updated ')
         }
+        // --------------------------------
+        if (!['Pending', 'outForDelivery', 'Placed'].includes(req.body.Status)) {
+          return res.status(400).send("Not a valid status");
+      }
         if(currentOrder.Status===req.body.Status){
-          return res.send("not a valid request")
+          return res.status(400).send("Status is already set to this value");
         }
         const userId = currentOrder.UserId;
         const userdata = await User.findById(userId);
@@ -168,6 +190,70 @@ class OrderController {
         .status(500)
         .json({ success: false, message: "Internal server error in." });
     }
+  }
+  static async addtoUserCart(req,res){
+    const id=req.payload.aud;
+    const data=await Cart.find({UserId:id});
+    const {product}=req.body
+    let updatedDate;
+    if(data.length==0){
+      updatedDate=await Cart.create({
+        UserId:id,
+        Products:[product]
+      })
+    }else{
+      updatedDate=await Cart.findOneAndUpdate({UserId:id},
+        {$push:{Products:product}})
+    }
+    if(updatedDate.length==0){
+      return res.send("Not Updated")
+    }
+    res.send("saved")
+  }
+  static async placeMyCart(req,res){
+    try {
+    const {id}=req.params
+    if(!ObjectId.isValid(id)){
+      return res.send("Not a Valid Id")
+    }
+    const data=await Cart.findOne({UserId:id})
+    if(data.Products.length==0){
+      return res.status(302).json({message:"no item in the cart",status:302,success:false})
+    }
+    await finalPlaceOrder(req,res,data.Products,id)
+    const cart=await Cart.findOneAndUpdate({UserId:id},{
+      Products:[]
+    })
+    if(!cart){
+      return res.send("Cart is still not empty")
+    }
+    res.json({ Status:200,success: true,message:"Email Sent Sucessfully" });
+    } catch (error) {
+      res.status(501).send(error.message)
+    }
+  }
+  static async updateUserDetails(req,res){
+    try {
+      const userid= req.payload.aud
+    const {Name,Phone,Address,Gender,Email}=req.body
+    if(!Name&&!Phone&&!Address&&!Gender&&!Email){
+      return res.send("No Field is Defined Nothing is Updated")
+    }
+    const data=await User.findByIdAndUpdate(userid,{
+      Name,
+      Phone,
+      Address,
+      Gender,
+      Email
+    })
+    if(!data){
+      return res.send("Details not Updated")
+    }
+    res.status(200).send("Updated Sucessfully")
+    } catch (error) {
+      res.send(error.message)
+    }
+
   }
 }
 

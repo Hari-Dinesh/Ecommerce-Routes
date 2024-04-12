@@ -8,7 +8,7 @@ class ProductController {
     }
     const percentage = Math.round(
       ((actualPrice - sellingPrice) / actualPrice) * 100
-    );
+    );//
       
     const newProduct = new Product({
       ProductName,
@@ -42,14 +42,15 @@ class ProductController {
       }
       const { ProductName, actualPrice, sellingPrice, ProductDescription } = req.body;
       const productdetails=await Product.findById(id);
+      if(!productdetails){
+        return res.send("Incorrect Product Id")
+      }
       let percentage;
       if(!actualPrice&&!sellingPrice){
         percentage=productdetails.percentage
       }else if(actualPrice&&!sellingPrice){
         percentage=Math.round(((actualPrice - productdetails.sellingPrice) / actualPrice) * 100)
-       
       }else if(!actualPrice&&sellingPrice){
-        console.log(sellingPrice,productdetails.actualPrice)
         percentage=Math.round(((productdetails.actualPrice - sellingPrice) / productdetails.actualPrice) * 100)
         console.log(percentage)
       }else{

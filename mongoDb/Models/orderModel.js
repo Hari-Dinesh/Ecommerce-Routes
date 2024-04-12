@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const OrderSchema = new mongoose.Schema({
@@ -23,10 +24,10 @@ const OrderSchema = new mongoose.Schema({
     },
     Status:{
         type: String,
-        enum: ['Pending', 'outForDelivary',"Placed"],
-        default:'Pending'
+        enum: ['Pending','outForDelivery','Placed'],
+        default:'Pending',
+        required:true
     }
-   
 });
 
 const Order = mongoose.model('Order', OrderSchema);

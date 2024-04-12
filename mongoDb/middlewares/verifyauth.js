@@ -3,7 +3,10 @@ import {checkAuthorization} from './checkAuthorization.js';
 import Admin from "../Models/adminModel.js";
 import { ObjectId } from 'mongodb';
 const adminverify = async (req, res, next) => {
-  checkAuthorization(req,res,async()=>{
+  checkAuthorization(req,res,async(role)=>{
+    if(role!=="admin"){
+      return res.status(402).json({message:"You are not a valid admin",status:402,success:false})
+    }
     try {
       jwtHelper.verifyAccessToken(req, res, async (err) => {
         if (err) {
@@ -14,7 +17,7 @@ const adminverify = async (req, res, next) => {
         const userId = req.payload.aud;
         if (!ObjectId.isValid(userId)) {
           return res.send("Not a valid user ID");
-      }
+        }
         const findAdminId = await Admin.findById(userId);
         if (!findAdminId) {
           return res
