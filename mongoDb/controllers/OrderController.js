@@ -1,13 +1,12 @@
 import Order from "../Models/orderModel.js";
 import User from "../Models/UserModel.js";
-import Admin from "../Models/adminModel.js";
 import Cart from "../Models/cart.js";
 import Product from "../Models/ProductModel.js";
+import AllValidationSchema from "../helper/All_validation.js";
 import { Email } from "../helper/Mail.js";
 import { ObjectId } from 'mongodb';
 const finalPlaceOrder=async(req,res,data,userId)=>{
       const user = await User.findById(userId);
-      console.log(user)
       let totalPrice=0;
       const value= data.map(async x=>{
         const product=await Product.findById(x.productId)
@@ -30,37 +29,52 @@ const finalPlaceOrder=async(req,res,data,userId)=>{
       );
       
 }
+async function validateProduct(product) {
+  const validationPromises = product.map(async (x) => {
+    
+    if (!ObjectId.isValid(x.productId)) {
+      throw new Error("wrong producttt Id");
+    }
+    const foundProduct = await Product.findById(x.productId);
+    if (!foundProduct) {
+      throw new Error(`product id does not exist ${x.productId}`);
+    }
+    if (!x.quantity) {
+      throw new Error("Incorrect quantity or quantity required");
+    }
+  });
+  await Promise.all(validationPromises);
+}
 class OrderController {
   static async Order(req, res) {
     try {
       const userId = req.payload.aud;
-      const data1=req.body.data
-     
-      if(data1.length!=1){
-        return res.send('Incorrect Item notation')
+      const data1=req.body.Item
+      
+      if(!Array.isArray(data1)||data1.length!=1){
+        return res.status(301).send('Incorrect Item notation')
       }
+      await validateProduct(data1)
       
       await finalPlaceOrder(req,res,data1,userId)
       res.status(201).json({status:201,success:true,message:"Order Placed YOY"})
     } catch (error) {
-      console.log(error)
       return res
         .status(500)
-        .json({ success: false, message: "Internal server error out." });
+        .json({ success: false, message: error.message });
     }
   }
 
   static async dashboardData(req, res) {
     try {
-      const { UserId, fromDate, toDate } = req.body;
-      if(typeof UserId!='undefined'){
-        if(!UserId){
-          return res.send("Not a correct user id")
-        }
+      const value = await AllValidationSchema.validateAsync(req.body)
+      let UserId;
+      let location
+      if(value.UserId){
+        UserId=value.UserId
       }
-      
-      if(fromDate>toDate){
-        return res.send("Input Date Format is Incorrect")
+      if(value.location){
+        location=value.location
       }
       
       const currentDate = new Date();
@@ -72,7 +86,8 @@ class OrderController {
       const generatePipeline = (startDate, endDate) => {
         const matchConditions = {
           ...(UserId && { UserId }),
-          ...(fromDate && toDate && { orderDate: { $gte: new Date(fromDate), $lt: new Date(toDate) } }),
+          ...(location && { shippingAddress: { $regex: location, $options: 'i' } }),
+          ...(value.fromDate && value.toDate && { orderDate: { $gte: new Date(value.fromDate), $lt: new Date(value.toDate) } }),
         };
 
         const pipeline = [{ $match: matchConditions }];
@@ -110,10 +125,34 @@ class OrderController {
         thisMonthStats: thisMonthStats[0],
         thisWeekStats: thisWeekStats[0],
       };
+      const max_user=await Order.aggregate([
+        [
+          {
+            $group: {
+              _id: "$UserId",
+              
+              totalValue: {
+                $sum: "$totalPrice",
+              },
+            },
+          },
+          {
+            $sort: {
+              totalValue: -1,
+            }, 
+          },
+          {
+            $limit:5
+          }
+          
+        ]
+      ])
 
-      res.json(responseData);
+      res.status(201).json({status:201,success:true,Revenue_data:responseData,max_user});
     } catch (error) {
-      console.log(error)
+      if (error.isJoi === true) {
+        return res.status(400).send("Validation error: " + error.message);
+      }
       return res
         .status(500)
         .json({ success: false, message: "Internal server error out." });
@@ -125,9 +164,20 @@ class OrderController {
       const UserId = req.payload.aud;
       const orders = await Order.find({UserId:UserId});
       if(!orders){
-        return res.send(orders)
+        return res.status(301).json({success:false,Status:301,message:"Incorrect Order Details"})
       }
-      res.send(orders.reverse());
+      const data = await Promise.all(orders.map(async (ord) => {
+        const orderData = ord.orderdata.map(async (prod) => {
+            const product_here = await Product.findById(prod.productId);
+            prod.product=product_here
+            delete prod.productId
+            return prod;
+        });
+       
+       await Promise.all(orderData);
+    }));
+    
+      res.status(201).send(orders.reverse());
     } catch (error) {
       res.status(500).send(error.message);
     }
@@ -135,10 +185,21 @@ class OrderController {
 
   static async adminOrders(req, res) {
     try {
-      const data = await Order.find({Status : { $in: ["Pending", "Out for delivery"] }});
-      res.json({ success: true, data: data });
+      const orders = await Order.find({Status : { $in: ["Pending", "Out for delivery"] }});
+      if(!orders){
+        return res.status(301).json({success:false,status:301,message:"Unable to Fetch the Data"})
+      }
+      await Promise.all(orders.map(async (ord) => {
+        const orderData = ord.orderdata.map(async (prod) => {
+            const product_here = await Product.findById(prod.productId);
+            prod.product=product_here
+            delete prod.productId
+            return prod;
+        });
+        await Promise.all(orderData)
+    }))
+      res.status(201).json({ Status:201,success: true, data: orders });
     } catch (error) {
-      console.log(error)
       return res
         .status(500)
         .json({ success: false, message: "Internal server error in." });
@@ -149,14 +210,14 @@ class OrderController {
     try {
         const { oid } = req.params; //oid=>orderId
         if(!ObjectId.isValid(oid)){
-          return res.send("Incorrect orderId")
+          return res.status(401).send("Incorrect orderId")
         }
         const currentOrder = await Order.findById(oid);
         if(!currentOrder){
-          return res.send("There is a error in order ID")
+          return res.status(401).send("There is a error in order ID")
         }
         if(!req.body.Status){
-          return res.send('Status need to be updated ')
+          return res.status(401).send('Status need to be updated ')
         }
         // --------------------------------
         if (!['Pending', 'outForDelivery', 'Placed'].includes(req.body.Status)) {
@@ -191,10 +252,19 @@ class OrderController {
         .json({ success: false, message: "Internal server error in." });
     }
   }
+
   static async addtoUserCart(req,res){
-    const id=req.payload.aud;
-    const data=await Cart.find({UserId:id});
+    try {
+      const id=req.payload.aud;
     const {product}=req.body
+    if(!Array.isArray(product)){
+      return res.status(301).send('Incorrect Item notation')
+    }
+     if(product.length<1){
+      return res.send("not a valid array")
+     }
+    await validateProduct(product)
+    const data=await Cart.find({UserId:id});
     let updatedDate;
     if(data.length==0){
       updatedDate=await Cart.create({
@@ -206,15 +276,19 @@ class OrderController {
         {$push:{Products:product}})
     }
     if(updatedDate.length==0){
-      return res.send("Not Updated")
+      return res.status(401).send("Not Updated")
     }
-    res.send("saved")
+    res.status(201).send("saved")
+    } catch (error) {
+      res.status(401).json({status:401,message:error.message})
+    }
   }
+
   static async placeMyCart(req,res){
     try {
     const {id}=req.params
     if(!ObjectId.isValid(id)){
-      return res.send("Not a Valid Id")
+      return res.status(401).send("Not a Valid Id")
     }
     const data=await Cart.findOne({UserId:id})
     if(data.Products.length==0){
@@ -225,35 +299,38 @@ class OrderController {
       Products:[]
     })
     if(!cart){
-      return res.send("Cart is still not empty")
+      return res.status(401).send("Cart is still not empty")
     }
-    res.json({ Status:200,success: true,message:"Email Sent Sucessfully" });
+    res.status(200).json({ Status:200,success: true,message:"Email Sent Sucessfully" });
     } catch (error) {
       res.status(501).send(error.message)
     }
   }
+
   static async updateUserDetails(req,res){
     try {
       const userid= req.payload.aud
-    const {Name,Phone,Address,Gender,Email}=req.body
-    if(!Name&&!Phone&&!Address&&!Gender&&!Email){
-      return res.send("No Field is Defined Nothing is Updated")
+    const value=await AllValidationSchema.validateAsync(req.body)
+    if(!value.Name&&!value.Phone&&!value.Address&&!value.Gender&&!value.Email){
+      return res.status(401).send("No Field is Defined Nothing is Updated")
     }
     const data=await User.findByIdAndUpdate(userid,{
-      Name,
-      Phone,
-      Address,
-      Gender,
-      Email
+      Name:value.Name,
+      Phone:value.Phone,
+      Address:value.Address,
+      Gender:value.Gender,
+      Email:value.Email
     })
     if(!data){
-      return res.send("Details not Updated")
+      return res.status(401).json({status:401,success:false,message:"The data is not Updated error from the database"})
     }
-    res.status(200).send("Updated Sucessfully")
+    res.status(200).json({status:200,success:true,message:"userdetails updated sucessfully"})
     } catch (error) {
-      res.send(error.message)
+      if (error.isJoi === true) {
+        return res.status(400).send("Validation error: " + error.message);
+      }
+      res.status(501).send(error.message)
     }
-
   }
 }
 

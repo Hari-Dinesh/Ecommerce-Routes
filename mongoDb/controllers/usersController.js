@@ -4,6 +4,7 @@ import Token from "../Models/Token.js";
 import bcrypt from "bcryptjs";
 import authSchema from "../helper/validation.js";
 import validlogin from "../helper/validationLogin.js";
+import authAdminJoi from "../helper/validateAdmin.js";
 import { Email } from "../helper/Mail.js";
 import { jwtHelper } from "../helper/jwt_helper.js";
 import { ObjectId } from 'mongodb';
@@ -70,7 +71,6 @@ class UserController {
     } catch (error) {
       if (error.isJoi === true) {
         error.status = 402;
-        console.log(error)
         res.status(402).send("Validation error: " + error.message);
       } else if (
         error.code === 11000 &&
@@ -112,7 +112,6 @@ class UserController {
         error.status = 402;
         res.status(402).send("Validation error: " + error.message);
       } else {
-        console.log(error)
         res.status(500).send("Error logging in user");
       }
     }
@@ -125,7 +124,7 @@ class UserController {
       const Phone = await verifyRefreshToken(refreshToken);
       const accessToken = await signAccessToken(Phone);
       const refToken = await signRefreshToken(Phone);
-      res.send({ accessToken: accessToken });
+      res.status(201).send({ accessToken: accessToken });
     } catch (error) {
       next(error);
     }
@@ -164,7 +163,7 @@ class UserController {
     try {
       const { id } = req.params;
       if (!ObjectId.isValid(id)) {
-        return res.send("Not a valid User Id");
+        return res.status(401).send("Not a valid User Id");
       }
       const data = await User.findByIdAndUpdate(id, {
         verification: true,
@@ -187,35 +186,43 @@ class UserController {
 class AdminController {
   static async adminCreate(req, res) {
     try {
-      const { Email, Password } = req.body;
+      const value=await authAdminJoi.validateAsync(req.body)
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(Password, salt);
+      const hashedPassword = await bcrypt.hash(value.Password, salt);
       const data = new Admin({
-        Email: Email,
+        Email: value.Email,
         Password: hashedPassword,
       });
+      
       data.save();
       res.status(201).json({ message: "Successfully Registered" });
     } catch (error) {
-      res.send("unable to create the user");
+      if (error.isJoi === true) {
+        error.status = 402;
+        return res.status(400).send("Validation error: " + error.message);
+      }
+      res.status(501).send("unable to create the user");
     }
   }
 
   static async adminLogin(req, res) {
     try {
-      const { Email, Password } = req.body;
-      const user = await Admin.findOne({ Email: Email });
+      const value=await authAdminJoi.validateAsync(req.body)
+      const user = await Admin.findOne({ Email: value.Email });
       if (!user) {
         return res.status(401).send({ message: "Invalid Email" });
       }
-      const passwordMatch = await bcrypt.compare(Password, user.Password);
+      const passwordMatch = await bcrypt.compare(value.Password, user.Password);
       if (!passwordMatch) {
         return res.status(401).send("Invalid password");
       }
       const accessToken = await signAccessToken(user.id);
       await finalValidationGenerateToken(accessToken, user, req, res,"admin");//saving the token to the Token Schema
     } catch (error) {
-      console.log(error)
+      if (err.isJoi === true) {
+        err.status = 402;
+        return res.status(400).send("Validation error: " + err.message);
+      }
       res.status(402).json({status:402,success:false,message:error.message});
     }
   }
@@ -226,7 +233,7 @@ class AdminController {
       const { filter } = req.body;
       const { MessageHeader } = req.body;
       if (!Message||!MessageHeader) {
-        return res.send(
+        return res.status(301).send(
           "Email Message and its Header need to be written properly"
         );
       }
@@ -235,14 +242,13 @@ class AdminController {
         .filter((user) => user.Email)
         .map((user) => user.Email);
       if (emails.length == 0) {
-        return res.send(
+        return res.status(301).send(
           "There is No Such Customer You are trying to send message for"
         );
       }
       await Email(emails, MessageHeader, Message);
-      return res.send("email sent sucessfully");
+      return res.status(301).send("email sent sucessfully");
     } catch (error) {
-      console.log(error)
       return res.send("error");
     }
   }

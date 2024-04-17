@@ -4,6 +4,7 @@ const checkAuthorization = async (req, res, next) => {
     if (!req.headers["authorization"]) {
         return res.status(400).json({
             success: false,
+            Status:400,
             message: "User needs to login to perform this action",
         });
     }

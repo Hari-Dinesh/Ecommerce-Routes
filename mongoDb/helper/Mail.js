@@ -27,7 +27,7 @@ const Email = async (recipientEmail, subject, htmlfield) => {
 
     await transporter.sendMail(mailOptions);
   } catch (error) {
-    res.status(500).json({ error: "Error sending login email notification", message: error.message });
+    res.status(500).json({ error: "Error sending login email notification",status:500, message: error.message });
   }
 };
 

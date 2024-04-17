@@ -16,7 +16,7 @@ const verifyUser=async(req,res,next)=>{
                 }
                 const userId = req.payload.aud;
                 if (!ObjectId.isValid(userId)) {
-                    return res.send("Not a valid user ID");
+                    return res.status(301).send("Not a valid user ID");
                 }
           const finduserId = await User.findById(userId);
           if (!finduserId) {

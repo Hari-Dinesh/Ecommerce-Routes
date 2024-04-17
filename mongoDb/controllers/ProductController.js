@@ -1,26 +1,34 @@
 import Product from "../Models/ProductModel.js";
+import authProductSchema from "../helper/Product.js";
 import { ObjectId } from 'mongodb';
 class ProductController {
   static async AddProduct(req, res) {
-    const { actualPrice, sellingPrice ,ProductName,ProductDescription} = req.body;
-    if(!actualPrice||!sellingPrice||!ProductName||!ProductDescription){
-      return res.send("Every field need to be defined there are still blanks")
+    try {
+      const value = await authProductSchema.validateAsync(req.body);
+    if(!value.actualPrice||!value.sellingPrice||!value.ProductName||!value.ProductDescription){
+      return res.status(401).send("Every field need to be defined there are still blanks")
     }
     const percentage = Math.round(
-      ((actualPrice - sellingPrice) / actualPrice) * 100
-    );//
+      ((value.actualPrice - value.sellingPrice) / value.actualPrice) * 100
+    );
       
     const newProduct = new Product({
-      ProductName,
-      actualPrice,
-      sellingPrice,
-      ProductDescription,
+      ProductName:value.ProductName,
+      actualPrice:value.actualPrice,
+      sellingPrice:value.sellingPrice,
+      ProductDescription:value.ProductDescription,//
       percentage: percentage,
     });
-    try {
       const Product = await newProduct.save();
+      if(!Product){
+        return res.status(301).json({success:true,status:301,message:"Unable to save the product"})
+      }
       res.status(201).json({ message: "new Product saved successfully", Product: Product });
     } catch (err) {
+      if (err.isJoi === true) {
+        err.status = 402;
+        return res.status(400).send("Validation error: " + err.message);
+      }
       res.status(400).json({ message: err.message });
     }
   }
@@ -28,7 +36,10 @@ class ProductController {
   static async getProduct(req, res) {
     try {
         const data = await Product.find();
-        res.send(data);
+        if(!data){
+          return res.status(301).send({status:301,success:false,message:"Unable to get Data"})
+        }
+        res.status(201).send(data);
     } catch (error) {
       res.send("Found the Error");
     }
@@ -40,45 +51,48 @@ class ProductController {
       if(!ObjectId.isValid(id)){
         return res.send("Not a valid userId")
       }
-      const { ProductName, actualPrice, sellingPrice, ProductDescription } = req.body;
+      const value=await authProductSchema.validateAsync(req.body);
       const productdetails=await Product.findById(id);
       if(!productdetails){
         return res.send("Incorrect Product Id")
       }
       let percentage;
-      if(!actualPrice&&!sellingPrice){
+      if(!value.actualPrice&&!value.sellingPrice){
         percentage=productdetails.percentage
-      }else if(actualPrice&&!sellingPrice){
-        percentage=Math.round(((actualPrice - productdetails.sellingPrice) / actualPrice) * 100)
-      }else if(!actualPrice&&sellingPrice){
-        percentage=Math.round(((productdetails.actualPrice - sellingPrice) / productdetails.actualPrice) * 100)
-        console.log(percentage)
+      }else if(value.actualPrice&&!value.sellingPrice){
+        percentage=Math.round(((value.actualPrice - productdetails.sellingPrice) / value.actualPrice) * 100)
+      }else if(!value.actualPrice&&value.sellingPrice){
+        percentage=Math.round(((productdetails.actualPrice - value.sellingPrice) / productdetails.actualPrice) * 100)
       }else{
-        percentage=Math.round(((actualPrice - sellingPrice) / actualPrice) * 100)
+        percentage=Math.round(((value.actualPrice - value.sellingPrice) / value.actualPrice) * 100)
       }
       
       const data = await Product.findByIdAndUpdate(
         id,
         {
-          ProductName,
-          actualPrice,
-          sellingPrice,
-          ProductDescription,
+          ProductName:value.ProductName,
+          actualPrice:value.actualPrice,
+          sellingPrice:value.sellingPrice,
+          ProductDescription:value.ProductDescription,
           percentage: percentage,
         },
         { new: true }
       );
-      
+      console.log(data)
       if (!data) {
         return res.status(404).json({ success: false, message: "Document not found" });
       }
 
-      res.json({
+      res.status(201).json({
         success: true,
         message: "Document updated successfully",
         data: data,
       });
     } catch (error) {
+      if (error.isJoi === true) {
+        error.status = 402;
+        return res.status(400).send("Validation error: " + error.message);
+      }
       console.log(error)
       res.status(404).json({ success: false });
     }
@@ -94,7 +108,7 @@ class ProductController {
       if (!data) {
         return res.status(404).json({ success: false, message: "Document not found" });
       }
-      res.json({
+      res.status(200).json({
         success: true,
         message: "Document deleted successfully",
         productName:data.ProductName

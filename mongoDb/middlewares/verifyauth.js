@@ -16,7 +16,7 @@ const adminverify = async (req, res, next) => {
         }
         const userId = req.payload.aud;
         if (!ObjectId.isValid(userId)) {
-          return res.send("Not a valid user ID");
+          return res.status(301).send("Not a valid user ID");
         }
         const findAdminId = await Admin.findById(userId);
         if (!findAdminId) {
