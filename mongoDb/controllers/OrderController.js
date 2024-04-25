@@ -104,8 +104,8 @@ class OrderController {
             Revenue: { $sum: "$totalPrice" },
             Orders: { $sum: 1 },
             ItemsOrdered: { $sum: { $size: "$orderdata" } },
-          },
-        });
+            },
+        },);
 
         return pipeline;
       };
@@ -130,7 +130,7 @@ class OrderController {
           {
             $group: {
               _id: "$UserId",
-              
+              Orderscount:{$sum:1},
               totalValue: {
                 $sum: "$totalPrice",
               },
@@ -166,16 +166,16 @@ class OrderController {
       if(!orders){
         return res.status(301).json({success:false,Status:301,message:"Incorrect Order Details"})
       }
-      const data = await Promise.all(orders.map(async (ord) => {
-        const orderData = ord.orderdata.map(async (prod) => {
-            const product_here = await Product.findById(prod.productId);
-            prod.product=product_here
-            delete prod.productId
-            return prod;
-        });
+    //   const data = await Promise.all(orders.map(async (ord) => {
+    //     const orderData = ord.orderdata.map(async (prod) => {
+    //         const product_here = await Product.findById(prod.productId);
+    //         prod.product=product_here
+    //         delete prod.productId
+    //         return prod;
+    //     });
        
-       await Promise.all(orderData);
-    }));
+    //    await Promise.all(orderData);
+    // }));
     
       res.status(201).send(orders.reverse());
     } catch (error) {

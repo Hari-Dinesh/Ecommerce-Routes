@@ -17,21 +17,21 @@ const {
 
 //updating token
 const finalValidationGenerateToken = async (accessToken, user, req, res,role) => {
-  const finddata = await Token.find({ UserId: user._id });
-  if (finddata.length > 0) {
-    if(finddata[0].Role != role){
-      return res.status(402).json({status:402,success:false,message:"incorrect role"});
-    }
-    await Token.findByIdAndUpdate(finddata[0].id, {
-      Token: accessToken,
-    });
-  } else {
-    await new Token({
-      UserId: user._id,
-      Role:role,
-      Token: accessToken,
-    }).save();
-  }
+  const finddata = await 
+  // if (finddata.length > 0) {
+  //   if(finddata[0].Role != role){
+  //     return res.status(402).json({status:402,success:false,message:"incorrect role"});
+  //   }
+  //   await Token.findByIdAndUpdate(finddata[0].id, {
+  //     Token: accessToken,
+  //   });
+  // } else {
+  //   await new Token({
+  //     UserId: user._id,
+  //     Role:role,
+  //     Token: accessToken,
+  //   }).save();
+  // }
   res.status(200).send({ accessToken });
 };
 

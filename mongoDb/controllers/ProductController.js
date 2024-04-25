@@ -39,7 +39,8 @@ class ProductController {
         if(!data){
           return res.status(301).send({status:301,success:false,message:"Unable to get Data"})
         }
-        res.status(201).send(data);
+        const totalCount=await Product.countDocuments()
+        res.status(201).json({TotalProducts:totalCount,data});
     } catch (error) {
       res.send("Found the Error");
     }
