@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -21,5 +21,13 @@
     "validate-date": "^2.1.0",
     "validator": "^13.11.0",
     "yup": "^1.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.5",
+    "@babel/preset-env": "^7.24.5",
+    "@jest/globals": "^29.7.0",
+    "babel-jest": "^29.7.0",
+    "esm": "^3.2.25",
+    "jest": "^29.7.0"
   }
 }

@@ -35,7 +35,7 @@ class lithium{
     static async driverid(req,res){
         try {
             const {id}=req.params
-            const query=client.query('select driver_uuid,sum(trip_distance::numeric) as total_distance,sum(pty_your_earnings::numeric) as total_income from trip_report group by driver_uuid having driver_uuid=$1',[id])
+            const query=await client.query('select driver_uuid,sum(trip_distance::numeric) as total_distance,sum(pty_your_earnings::numeric) as total_income from trip_report group by driver_uuid having driver_uuid=$1',[id])
             res.status(200).json({ status: 2010, success: true, data: query.rows });
         } catch (error) {
             res.status(500).json({status:500,success:false,message:error.message})
@@ -44,7 +44,7 @@ class lithium{
     static async datefiltergetrevenue(req,res){
         try {
             const {from_date,to_date}=req.body
-            const query= await client.query('select count(*)as total_rides,sum(trip_distance::numeric) as total_distance,sum(pty_your_earnings::numeric) from trip_report where date(trip_request_time) between $1 and $2',[from_date,to_date])
+            const query= await client.query('select count(*)as total_rides,sum(trip_distance::numeric) as total_distance,round(sum(pty_your_earnings::numeric),2) as total_earnings from trip_report where date(trip_request_time) between $1 and $2',[from_date,to_date])
             res.status(200).json({ status: 201, success: true, data: query.rows });
         } catch (error) {
             res.status(500).json({status:500,success:false,message:error.message})
@@ -69,7 +69,7 @@ class lithium{
     }
     static async timezone(req,res){
         try {
-            const query=await client.query(' SELECT EXTRACT(HOUR FROM trip_request_time) as Time_hour,count(*) AS rides FROM trip_report group by Time_hour order by rides desc')
+            const query=await client.query(` SELECT TO_CHAR(trip_request_time, 'HH12 AM') as Time_hour,cast(count(*) as int) AS rides FROM trip_report group by Time_hour order by rides desc`)
             res.status(200).json({ status: 201, success: true, data: query.rows })
         } catch (error) {
             res.status(500).json({status:500,success:false,message:error.message})
@@ -78,7 +78,7 @@ class lithium{
     static async timezonebylimit(req,res){
         try {
             const {limit}=req.body
-            const query= await client.query('SELECT start_hour,CASE WHEN start_hour + $1 > 24 THEN 24 ELSE start_hour + $1 END AS end_hour,SUM(orders) OVER (ORDER BY start_hour ROWS BETWEEN CURRENT ROW AND $1 FOLLOWING) AS total_orders_in_this_session FROM (SELECT EXTRACT(HOUR FROM trip_request_time) AS start_hour,COUNT(*) AS orders FROM trip_report GROUP BY start_hour) AS HourlyOrders ORDER BY SUM(orders) OVER (ORDER BY start_hour ROWS BETWEEN CURRENT ROW AND $1 FOLLOWING) desc',[limit])
+            const query= await client.query('SELECT cast(start_hour as int),cast(CASE WHEN start_hour + $1 > 24 THEN 24 ELSE start_hour + $1 END as int) AS end_hour,cast(SUM(orders) OVER (ORDER BY start_hour ROWS BETWEEN CURRENT ROW AND $1 FOLLOWING) as int) AS total_orders_in_this_session FROM (SELECT EXTRACT(HOUR FROM trip_request_time) AS start_hour,COUNT(*) AS orders FROM trip_report GROUP BY start_hour) AS HourlyOrders ORDER BY SUM(orders) OVER (ORDER BY start_hour ROWS BETWEEN CURRENT ROW AND $1 FOLLOWING) desc',[limit])
             res.status(200).json({ status: 201, success: true, data: query.rows })
             
         } catch (error) {
